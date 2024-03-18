@@ -1,32 +1,22 @@
-/*
- * m1racle-poc: a basic proof of concept for the M1RACLES vulnerability in the Apple M1.
- * 
- * This program allows you to read and write the state of the s3_5_c15_c10_1 CPU register.
- *
- * Please visit m1racles.com for more information.
- *
- * Licensed under the MIT license.
- */
+// Mutex.c
 
-#include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <unistd.h> // For usleep
 
-// Function to lock mutex
+// Function prototypes for accessing the M1RACLES register
+void _miwrite(uint64_t value);
+uint64_t _miread();
+
+// Mutex Lock
 void miMutexLock() {
     while (_miread() != 0) { usleep(10); }
     _miwrite(1);
 }
 
-// Function to unlock mutex
+// Mutex Unlock
 void miMutexUnlock() {
     _miwrite(0);
 }
-
-// Extern C functions for accessing the M1RACLES register
-extern void _miwrite(uint64_t value);
-extern uint64_t _miread();
 
 // Reader-Writer Lock
 static uint64_t readers = 0;
@@ -165,14 +155,15 @@ void miReleaseDistributedLock() {
     distributedLock = 0;
 }
 
-int main(int argc, char **argv) {
+// Function implementations for accessing the M1RACLES register
+void _miwrite(uint64_t value) {
+    // Implement the write operation using inline assembly
+    asm volatile ("msr s3_5_c15_c10_1, %0" : : "r"(value));
+}
+
+uint64_t _miread() {
     uint64_t val;
-    if (argc > 1) {
-        val = atoi(argv[1]);
-        _miwrite(val);
-    } else {
-        val = _miread();
-        printf("%llu\n", val);
-    }
-    return 0;
+    // Implement the read operation using inline assembly
+    asm volatile ("mrs %0, s3_5_c15_c10_1" : "=r"(val));
+    return val;
 }
